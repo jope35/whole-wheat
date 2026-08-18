@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "transcripts": {
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/0cb6f8f7-0f81-4795-a9f1-6474247d1b83/0cb6f8f7-0f81-4795-a9f1-6474247d1b83.jsonl": 1786998165425,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/0cb6f8f7-0f81-4795-a9f1-6474247d1b83/subagents/a6905525-54ca-46ad-8f67-6cb2348eb10b.jsonl": 1786998156695,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/152ca4eb-9f33-4e58-93ae-712ab1250112/152ca4eb-9f33-4e58-93ae-712ab1250112.jsonl": 1787034300878,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/2f1d73f8-5ca2-47e5-834b-b6813a6a2074/2f1d73f8-5ca2-47e5-834b-b6813a6a2074.jsonl": 1787032487309,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/2f1d73f8-5ca2-47e5-834b-b6813a6a2074/subagents/853ba7cf-5142-423e-9330-e512a17eeeda.jsonl": 1787032483901,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/5131056f-6b6d-4ca3-b676-344670525966/5131056f-6b6d-4ca3-b676-344670525966.jsonl": 1787057684803,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/54d462fa-8329-4482-a3e4-73b5957bb34d/54d462fa-8329-4482-a3e4-73b5957bb34d.jsonl": 1787062994686,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/694d13ff-c580-4989-9f8e-173070db420c/694d13ff-c580-4989-9f8e-173070db420c.jsonl": 1787032579784,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/97df32b9-33f8-449b-aba4-b114c9c3d393/97df32b9-33f8-449b-aba4-b114c9c3d393.jsonl": 1787040088423,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/a0cb2c2f-2f58-40b0-aaf7-837c6e2a687a/a0cb2c2f-2f58-40b0-aaf7-837c6e2a687a.jsonl": 1787062911574,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/a0cb2c2f-2f58-40b0-aaf7-837c6e2a687a/subagents/001a51ce-2b3a-492b-b1cd-a33e03c78567.jsonl": 1787059372196,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/a0cb2c2f-2f58-40b0-aaf7-837c6e2a687a/subagents/1af910b5-c82c-4522-9266-183616af1b5b.jsonl": 1787062835935,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/a0cb2c2f-2f58-40b0-aaf7-837c6e2a687a/subagents/5106d94b-76cd-465c-b3e5-eb697c197431.jsonl": 1787058607678,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/a0cb2c2f-2f58-40b0-aaf7-837c6e2a687a/subagents/6487f15e-f68b-4e7e-b64e-97ee18042114.jsonl": 1787060066721,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/a0cb2c2f-2f58-40b0-aaf7-837c6e2a687a/subagents/6c95984f-960a-43ec-9bc8-439eea1e22fe.jsonl": 1787058280603,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/a0cb2c2f-2f58-40b0-aaf7-837c6e2a687a/subagents/7daad348-c75d-464c-9519-996b78f94dd7.jsonl": 1787059208907,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/a0cb2c2f-2f58-40b0-aaf7-837c6e2a687a/subagents/94e941e3-bdef-4bbd-94e1-788bb90b5aa1.jsonl": 1787058835870,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/a0cb2c2f-2f58-40b0-aaf7-837c6e2a687a/subagents/a4638ac2-41e5-42da-8507-91c9b4b39ad4.jsonl": 1787060021196,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/a0cb2c2f-2f58-40b0-aaf7-837c6e2a687a/subagents/b9562781-2772-4c68-b837-1131ff134250.jsonl": 1787059033782,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/a0cb2c2f-2f58-40b0-aaf7-837c6e2a687a/subagents/c3524c77-f93e-4cad-a13f-ce5ce56b27b9.jsonl": 1787059589407,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/a0cb2c2f-2f58-40b0-aaf7-837c6e2a687a/subagents/d9e3fd2f-3bb6-4804-aad2-ef280fa8b217.jsonl": 1787062950479,
+    "/Users/joostdetheije/.cursor/projects/Users-joostdetheije-Developer-personal-whole-wheat/agent-transcripts/a0cb2c2f-2f58-40b0-aaf7-837c6e2a687a/subagents/e0b2bf9a-88af-4483-b685-b97f87a57298.jsonl": 1787058381050
+  }
+}
