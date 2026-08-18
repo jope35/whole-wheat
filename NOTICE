@@ -1,0 +1,7 @@
+The MultiHop-RAG corpus is made available under the Open Data Commons
+Attribution License: https://opendatacommons.org/licenses/by/1-0/
+
+Source: https://huggingface.co/datasets/yixuantt/MultiHopRAG
+Subset: corpus (609 news articles)
+Citation: Tang and Yang, "MultiHop-RAG: Benchmarking Retrieval-Augmented
+Generation for Multi-Hop Queries", arXiv:2401.15391, 2024.
