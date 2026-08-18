@@ -12,12 +12,15 @@ Inspired by: [Introducing Toast 1](https://www.mixedbread.com/blog/toast-1), [to
 
 Ship a small Python repo a reader can run after clone:
 
-1. Index 609 MultiHop-RAG news articles into SQLite + `sqlite-vec`.
-2. Run a LangGraph searcher that returns a ranked **evidence package** (snippets, not an answer).
-3. Optionally run a 30-line **parent** that answers only from that package.
-4. Score the searcher on 20 frozen questions with article-level hit@k, with MLflow traces.
+- Index 609 MultiHop-RAG news articles into SQLite + `sqlite-vec`.
+- Run a LangGraph searcher that returns a ranked **evidence package** (snippets, not an answer).
+- Optionally run a 30-line **parent** that answers only from that package.
+- Score the searcher on 20 frozen questions with article-level hit@k, with MLflow traces.
+- Success: a reader can follow the graph in one sitting, see `search` vs `grep` vs `submit_ranking`, and understand why a frontier model should not own the search loop.
 
-Success: a reader can follow the graph in one sitting, see `search` vs `grep` vs `submit_ranking`, and understand why a frontier model should not own the search loop.
+## Tooling
+
+[uv](https://docs.astral.sh/uv/) manages the Python runtime and the project dependencies. Pin the interpreter with `requires-python` in `pyproject.toml` (and `.python-version` if useful). Lock deps in `uv.lock`. Readers install and run with `uv sync` and `uv run`. Do not document pip, Poetry, or conda as the project workflow.
 
 ## Non-goals
 
@@ -28,6 +31,8 @@ Success: a reader can follow the graph in one sitting, see `search` vs `grep` vs
 - Null-query evaluation, prune/read tools, or a public OfficeQA leaderboard.
 - Live model calls in CI.
 
+
+
 ## Contract
 
 The searcher is a retrieval subagent.
@@ -35,6 +40,8 @@ The searcher is a retrieval subagent.
 - **In:** a natural-language question.
 - **Out:** a ranked evidence package. No final answer.
 - The parent (CLI `ask` only) may write an answer. It has no search tools. The CLI calls searcher then parent; the parent does not call the searcher as a tool.
+
+
 
 ### Evidence package
 
@@ -83,37 +90,45 @@ question
     └─► parent completion(question + package)       ──► answer (ask only)
 ```
 
-- **Index:** `all-MiniLM-L6-v2` embeddings in SQLite via `sqlite-vec`. `grep` is SQL `LIKE` over the same text rows. If the pattern is a valid regex, `grep` may also apply it in Python on the SQL candidate set; if the regex is invalid, treat the pattern as a literal `LIKE` substring. Do not raise.
-- **LLM:** `langchain-openai.ChatOpenAI` against the OpenAI Chat Completions API, or any compatible `base_url`. Default searcher model: `gpt-4o-mini`. Parent may use the same model or `WHOLE_WHEAT_PARENT_MODEL`.
+- **Index:** [FastEmbed](https://qdrant.github.io/fastembed/) `TextEmbedding` with `nomic-ai/nomic-embed-text-v1.5-Q` (768-d, full dims, no Matryoshka truncate) stored in SQLite via `sqlite-vec`. Prefix chunks with `search_document: ` at ingest and queries with `search_query: ` at search time (Nomic task instructions). `grep` is SQL `LIKE` over the same text rows. If the pattern is a valid regex, `grep` may also apply it in Python on the SQL candidate set; if the regex is invalid, treat the pattern as a literal `LIKE` substring. Do not raise.
+
+- **LLM**: langchain-openai.ChatOpenAI against the OpenAI Chat Completions API, or any compatible base_url. Default searcher model: `gpt-5.6-luna`. Parent may use the same model or WHOLE_WHEAT_PARENT_MODEL.
+
 - **Retriever protocol:** `search(query, k) -> list[Hit]` and `grep(pattern, k) -> list[Hit]`. The graph never imports SQLite.
+
+
 
 ## Components
 
-| Module | Responsibility |
-|---|---|
-| `ingest.py` | Read `data/corpus.json`, chunk, embed, write `data/index.sqlite`. Idempotent: rebuilds the index cleanly. Does not run implicitly from `search`. |
-| `retriever.py` | `search` / `grep` over SQLite. `Hit = {chunk_id, article_id, title, source, published_at, text}`. |
-| `tools.py` | LangChain tools `search`, `grep`, `submit_ranking`. `submit_ranking` writes the package onto graph state and ends the loop. |
-| `graph.py` | Explicit `StateGraph`: `seed_search` → `agent` → `tools` → `agent` … |
-| `parent.py` | One Chat Completions call. Answer only from the package; if `no_evidence` or the package is empty, say so. |
-| `eval.py` | `fetch` and `run` (searcher only). |
-| `cli.py` | Commands: `ingest`, `search`, `ask`, `eval fetch`, `eval run`. |
+
+| Module         | Responsibility                                                                                                                                   |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `ingest.py`    | Read `data/corpus.json`, chunk, embed, write `data/index.sqlite`. Idempotent: rebuilds the index cleanly. Does not run implicitly from `search`. |
+| `retriever.py` | `search` / `grep` over SQLite. `Hit = {chunk_id, article_id, title, source, published_at, text}`.                                                |
+| `tools.py`     | LangChain tools `search`, `grep`, `submit_ranking`. `submit_ranking` writes the package onto graph state and ends the loop.                      |
+| `graph.py`     | Explicit `StateGraph`: `seed_search` → `agent` → `tools` → `agent` …                                                                             |
+| `parent.py`    | One Chat Completions call. Answer only from the package; if `no_evidence` or the package is empty, say so.                                       |
+| `eval.py`      | `fetch` and `run` (searcher only).                                                                                                               |
+| `cli.py`       | Commands: `ingest`, `search`, `ask`, `eval fetch`, `eval run`.                                                                                   |
+
 
 Graph state is only: `messages`, `pool`, `ranking`, `rounds`.
 
 ## Data flow
 
-1. **`ingest` (once).** Articles → chunks → embeddings → `data/index.sqlite`. Fail the whole run if embed or SQLite write fails. No half index.
-2. **`search`.**  
-   a. `seed_search` runs the raw question through `retriever.search` and puts hits in `pool` (the original phrasing is always represented).  
+1. `ingest` **(once).** Articles → chunks → embeddings → `data/index.sqlite`. Fail the whole run if embed or SQLite write fails. No half index.
+2. `search`**.**
+  a. `seed_search` runs the raw question through `retriever.search` and puts hits in `pool` (the original phrasing is always represented).  
    b. The agent sees the question, seed hits, and remaining rounds. System prompt: write one concise sentence of what you want to find; use `search` for meaning; use `grep` for names, dates, titles, and exact tokens.  
    c. One model turn may emit several `search` and `grep` calls. Run those calls in parallel, then merge into `pool` keyed by `chunk_id`.  
    d. The agent calls `submit_ranking` with ordered `chunk_id`s and a one-line reason each.  
    e. Stop when a ranking is submitted, or after **4** agent rounds (the final ranking turn included). If the model stops without ranking, force `submit_ranking` from current `pool` order (seed hits if that is all there is).  
    f. Unknown `chunk_id`s in a ranking are dropped. If none remain, fall back to pool order. If the pool is empty, return `ranked: []` and `no_evidence: true`.
-3. **`ask`.** Run `search`, then `parent.py` with `{question, ranked}`.
-4. **`eval fetch`.** Write gitignored `data/eval.json` for the 20 qids.
-5. **`eval run`.** For each eval question, run the searcher, log the MLflow trace, compute article **hit@5** and **hit@10**. Print a table. If MLflow is unset or down, still print the table and warn that tracing was skipped.
+3. `ask`**.** Run `search`, then `parent.py` with `{question, ranked}`.
+4. `eval fetch`**.** Write gitignored `data/eval.json` for the 20 qids.
+5. `eval run`**.** For each eval question, run the searcher, log the MLflow trace, compute article **hit@5** and **hit@10**. Print a table. If MLflow is unset or down, still print the table and warn that tracing was skipped.
+
+
 
 ## Error handling
 
@@ -123,11 +138,15 @@ Graph state is only: `messages`, `pool`, `ranking`, `rounds`.
 - Bad tool arguments: return a short error string in the tool message; do not crash the graph.
 - No custom exception types, no queues.
 
+
+
 ## Observability
 
-- `mlflow.langchain.autolog()` (or the LangGraph tracer) around `search` / `eval run`.
+- `mlflow.langchain.autolog()` (or the LangGraph tracer) around `eval run`.
 - Each eval item is one MLflow run (or nested span) with query id, hit@5, hit@10, rounds, tool_call count.
 - Default tracking URI: local `./mlruns`.
+
+
 
 ## Testing
 
@@ -142,21 +161,28 @@ Manual: `uv run whole-wheat eval run` against the real index.
 
 ## Defaults and configuration
 
-| Knob | Default |
-|---|---|
-| Searcher model | `gpt-4o-mini` (`OPENAI_API_KEY`, optional `OPENAI_BASE_URL`) |
-| Parent model | same, or `WHOLE_WHEAT_PARENT_MODEL` |
-| Embedding model | `sentence-transformers/all-MiniLM-L6-v2` |
-| Max agent rounds | 4 |
-| Seed / tool `k` | 8 |
-| Ranking size | up to 10 chunks |
-| Parallelism | all `search`/`grep` calls in one model turn |
+
+| Knob             | Default                                                       |
+| ---------------- | ------------------------------------------------------------- |
+| Searcher model   | `gpt-5.6-luna` (`OPENAI_API_KEY`, optional `OPENAI_BASE_URL`) |
+| Parent model     | same, or `WHOLE_WHEAT_PARENT_MODEL`                           |
+| Embedding model  | FastEmbed `nomic-ai/nomic-embed-text-v1.5-Q` (768-d)          |
+| Embed prefixes   | `search_document: ` (chunks), `search_query: ` (queries)      |
+| Max agent rounds | 4                                                             |
+| Seed / tool `k`  | 8                                                             |
+| Ranking size     | up to 10 chunks                                               |
+| Parallelism      | all `search`/`grep` calls in one model turn                   |
+
+
+
 
 ## Layout
 
 ```text
 whole-wheat/
   pyproject.toml
+  uv.lock                     # locked deps; uv is the runtime + package manager
+  .python-version             # optional pin for `uv python`
   NOTICE                      # ODC-BY attribution for MultiHop-RAG
   data/
     corpus.json               # 609 articles (in git)
@@ -175,11 +201,15 @@ whole-wheat/
   docs/superpowers/specs/     # this file
 ```
 
+
+
 ## License notes
 
 - Code: Apache-2.0 (existing repo license).
 - MultiHop-RAG articles: ODC-BY — keep `NOTICE` and the dataset citation.
 - Do not commit `data/eval.json` (answers).
+
+
 
 ## Out of scope for v1 (explicit)
 
