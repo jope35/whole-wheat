@@ -82,7 +82,12 @@ def build_graph(retriever: Retriever, model: Any):
                 SystemMessage(
                     content=SYSTEM.format(
                         remaining=max(0, MAX_ROUNDS - rounds),
-                        pool=json.dumps(list(state["pool"].values())),
+                        pool=json.dumps(
+                            [
+                                {**h, "text": " ".join(h.get("text", "").split()[:80])}
+                                for h in state["pool"].values()
+                            ]
+                        ),
                     )
                 )
             ]
