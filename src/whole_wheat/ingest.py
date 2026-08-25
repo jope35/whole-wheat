@@ -2,11 +2,23 @@ from __future__ import annotations
 
 import json
 import re
+import sqlite3
 import sys
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 
+import sqlite_vec
+from fastembed import TextEmbedding
+from sqlite_vec import serialize_float32
+from tenacity import retry, stop_after_attempt
+
 from whole_wheat.constants import (
+    DOCUMENT_PREFIX,
+    EMBED_BATCH_SIZE,
+    EMBED_DIM,
+    EMBED_MODEL,
+    INDEX_PATH,
     KEEP_TYPES,
     MAX_CHUNK_TOKENS,
     PARSED_JSON_DIR,
@@ -143,3 +155,115 @@ def chunk_file(path: Path) -> list[Chunk]:
             )
         )
     return chunks
+
+
+@lru_cache(maxsize=1)
+def get_embedder() -> TextEmbedding:
+    return TextEmbedding(model_name=EMBED_MODEL)
+
+
+@retry(stop=stop_after_attempt(3), reraise=True)
+def embed_texts(texts: list[str]) -> list:
+    return list(get_embedder().embed(texts, batch_size=EMBED_BATCH_SIZE))
+
+
+def connect_index(path: Path) -> sqlite3.Connection:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(path, isolation_level=None)
+    try:
+        conn.enable_load_extension(True)
+    except (AttributeError, sqlite3.NotSupportedError):
+        raise SystemExit(
+            "This Python cannot load SQLite extensions. Use uv run "
+            "(uv-managed CPython), not Apple Python."
+        )
+    sqlite_vec.load(conn)
+    conn.enable_load_extension(False)
+    return conn
+
+
+def rebuild_schema(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        CREATE TABLE chunks (
+            id INTEGER PRIMARY KEY,
+            chunk_id TEXT NOT NULL UNIQUE,
+            document_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            source TEXT NOT NULL,
+            year TEXT NOT NULL,
+            text TEXT NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        f"""
+        CREATE VIRTUAL TABLE chunk_vectors USING vec0(
+            embedding float[{EMBED_DIM}] distance_metric=cosine
+        )
+        """
+    )
+
+
+def insert_batch(conn: sqlite3.Connection, batch: list[Chunk]) -> None:
+    prefixed = [DOCUMENT_PREFIX + chunk.text for chunk in batch]
+    vectors = embed_texts(prefixed)
+    for chunk, vector in zip(batch, vectors, strict=True):
+        cur = conn.execute(
+            """
+            INSERT INTO chunks (chunk_id, document_id, title, source, year, text)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                chunk.chunk_id,
+                chunk.document_id,
+                chunk.title,
+                chunk.source,
+                chunk.year,
+                chunk.text,
+            ),
+        )
+        rowid = cur.lastrowid
+        conn.execute(
+            "INSERT INTO chunk_vectors (rowid, embedding) VALUES (?, ?)",
+            (rowid, serialize_float32(vector.tolist())),
+        )
+
+
+def ingest(limit: int | None) -> None:
+    paths = list_json_paths(limit)
+    tmp_path = INDEX_PATH.with_name("index.sqlite.tmp")
+    if tmp_path.exists():
+        tmp_path.unlink()
+
+    conn = connect_index(tmp_path)
+    written = 0
+    batch: list[Chunk] = []
+    ok = False
+    try:
+        conn.execute("BEGIN")
+        rebuild_schema(conn)
+        for path in paths:
+            for chunk in chunk_file(path):
+                batch.append(chunk)
+                if len(batch) == EMBED_BATCH_SIZE:
+                    insert_batch(conn, batch)
+                    written += len(batch)
+                    batch = []
+        if batch:
+            insert_batch(conn, batch)
+            written += len(batch)
+            batch = []
+        conn.commit()
+        ok = True
+    except Exception:
+        if conn.in_transaction:
+            conn.execute("ROLLBACK")
+        raise
+    finally:
+        conn.close()
+        if not ok:
+            tmp_path.unlink(missing_ok=True)
+
+    tmp_path.replace(INDEX_PATH)
+    print(f"wrote {written} chunks from {len(paths)} files to {INDEX_PATH}")
