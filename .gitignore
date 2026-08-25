@@ -219,3 +219,10 @@ __marimo__/
 
 # Git worktrees
 .worktrees/
+
+# whole-wheat local data (corpus, index, eval answers)
+data/parsed_corpus/
+data/index.sqlite
+data/index.sqlite.tmp
+data/eval.json
+data/.cache/

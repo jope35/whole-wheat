@@ -1,0 +1,11 @@
+whole-wheat
+Copyright holders of this software: see LICENSE (Apache-2.0).
+
+OfficeQA Pro v2 (https://huggingface.co/datasets/databricks/officeqa-pro-v2)
+- Questions and answers: CC-BY-SA 4.0. Keep this NOTICE, the dataset citation,
+  and the Hugging Face access terms. Do not use answer keys to train models
+  that you then score on OfficeQA.
+- Source PDFs and their parses: public domain, per the dataset NOTICE.
+
+This project does not commit data/eval.json (answers) or data/parsed_corpus/
+(corpus files).
