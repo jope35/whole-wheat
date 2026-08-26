@@ -1,7 +1,8 @@
 # whole-wheat: Databricks search subagent (blog)
 
+Status: approved
 Date: 2026-08-25
-Status: draft for review
+Updated: 2026-08-26
 Repo: `whole-wheat`
 
 This spec is a teaching clone of the *contract* in Toast 1, SID-1, Chroma Context-1, and Databricks Instructed Retriever. It is not a clone of their weights, indexes, or scores. The code is for a blog post. It is not production.
@@ -241,31 +242,52 @@ One typed dict (or equivalent) per row. Tests round-trip JSON and reject missing
 | Reranker | off |
 | Index sync | triggered |
 
-## Bundle and layout
+## Delivery
 
-`databricks.yml` names: catalog, schema, volume, endpoint, index, ingest job, run job, two Foundation Model endpoints, MLflow experiment.
+One Databricks Asset Bundle. Build it in four slices. Each slice has its own implementation plan. Later slices consume earlier *contracts*, not earlier internals.
 
-CLI on the run job: `ingest` lives on the ingest job. `search`, `ask`, `eval fetch`, `eval run` live on the run job.
+| Slice | Plan | Live check (manual) |
+| --- | --- | --- |
+| 1 | Ingest | Page rows in Delta match the contract |
+| 2 | AI Search | `ann` / `FULL_TEXT` / `hybrid` return `Hit` |
+| 3 | Agent | `search` returns a package. `ask` returns an answer |
+| 4 | Eval | hit@k table. MLflow run per question |
+
+Thin notebooks call `src/whole_wheat/`. The notebook is the demo. The package holds the logic.
+
+Workspace names are bundle variables: `catalog`, `schema`, `volume`, `ai_search_endpoint`, `searcher_endpoint`, `parent_endpoint`. Do not hard-code them.
+
+The AI Search *endpoint* is declared in `databricks.yml`. The *index* is created in the Plan 2 notebook.
+
+Corpus load: first a tiny in-repo fixture JSON. Then a Hugging Face download cell that uses `HF_TOKEN`.
+
+You run every live workspace check. CI only runs contract tests.
 
 ```text
 whole-wheat/
   databricks.yml
   pyproject.toml
+  notebooks/
+    01_ingest.py
+    02_ai_search.py
+    03_search_ask.py
+    04_eval.py
   data/
-    subset.json          # frozen JSON basenames
-    qids.json            # frozen eval ids
+    fixture.json         # tiny parsed-JSON-shaped pages for Plan 1
+    subset.json          # frozen HF basenames (filled in Plan 1)
+    qids.json            # frozen eval ids (filled in Plan 4)
     eval.json            # gitignored
   src/whole_wheat/
+    contracts.py
     ingest.py
     retriever.py
     tools.py
     graph.py
     parent.py
     eval.py
-    cli.py
-    contracts.py         # shared typed shapes
-  tests/                 # contract tests only
+  tests/
   docs/superpowers/specs/
+  docs/superpowers/plans/
 ```
 
 ## License notes
