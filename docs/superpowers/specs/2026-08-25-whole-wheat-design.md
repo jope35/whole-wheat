@@ -62,47 +62,85 @@ The parent has no search tools. The job calls the searcher, then the parent.
 
 `ranked` is best-first. `no_evidence` is true only when force-submit has an empty pool.
 
-## Context diagram
+## Level 1: system context
 
-```mermaid
-flowchart LR
-    reader["Blog reader"]
-    ww["whole-wheat bundle"]
-    hf["Hugging Face\nOfficeQA Pro V2"]
-    ws["Databricks workspace\nAI Search, Foundation Models,\nMLflow, Unity Catalog"]
-    reader -->|"deploys ingest, search, ask, eval"| ww
-    ww -->|"parsed JSON subset"| hf
-    ww --> ws
-```
-
-## Container diagram
+Scope: the whole-wheat retrieval agent in use. A user asks a question. The agent searches and answers.
 
 ```mermaid
 flowchart TB
-    subgraph bundle["Databricks Asset Bundle"]
-        ingest["Ingest job\nJSON to page rows"]
-        run["Run job\nsearch / ask / eval"]
-        graph["LangGraph searcher"]
-        parent["Parent chat"]
-        evalc["Eval hit@k"]
+    user["Analyst<br/>[Person]<br/>Asks questions about<br/>Treasury records"]
+    ww["whole-wheat retrieval agent<br/>[Software System]<br/>Searches the corpus, then answers<br/>from ranked evidence only"]
+    search["Databricks AI Search<br/>[Software System]<br/>Semantic, keyword, and hybrid<br/>retrieval over the page index"]
+    fm["Databricks Foundation Model APIs<br/>[Software System]<br/>Small model searches.<br/>Large model answers."]
+    mlflow["MLflow<br/>[Software System]<br/>Stores traces and<br/>retrieval metrics"]
+    corpus["Hugging Face OfficeQA Pro V2<br/>[Software System]<br/>Parsed JSON corpus"]
+
+    user -->|"Asks a question, reads answer<br/>and cited pages [CLI]"| ww
+    ww -->|"Searches pages [HTTPS]"| search
+    ww -->|"Runs search loop and answer [HTTPS]"| fm
+    ww -->|"Sends traces and metrics [HTTPS]"| mlflow
+    ww -->|"Loads the frozen JSON subset once [HTTPS]"| corpus
+```
+
+## Level 2: containers
+
+Same system, same people, same external systems as Level 1. This level shows the containers inside the agent.
+
+```mermaid
+flowchart TB
+    user["Analyst<br/>[Person]"]
+
+    subgraph ww["whole-wheat retrieval agent [Software System]"]
+        cli["Run job CLI<br/>[Container: Python]<br/>Takes a question, calls the searcher,<br/>then the parent"]
+        searcher["Searcher graph<br/>[Container: LangGraph]<br/>Tool loop that returns a ranked<br/>evidence package"]
+        answerer["Parent<br/>[Container: LangChain]<br/>One chat call. Answers only<br/>from the package"]
+        evalr["Eval<br/>[Container: Python]<br/>Scores hit@5 and hit@10<br/>on frozen questions"]
+        loader["Ingest job<br/>[Container: Python]<br/>JSON to one row per page,<br/>then index sync"]
+        vol[("Corpus files<br/>[Container: Unity Catalog Volume]<br/>Parsed JSON subset")]
+        pages[("Page table<br/>[Container: Delta table]<br/>chunk_id, source_file,<br/>page_id, year, text")]
     end
-    vol["UC Volume\nparsed JSON"]
-    delta["Delta table\none row per page"]
-    idx["AI Search index\nDelta Sync + Qwen"]
-    small["Small FM"]
-    big["Large FM"]
-    mlf["MLflow"]
-    ingest --> vol
-    ingest --> delta
-    ingest --> idx
-    run --> graph
-    run --> parent
-    run --> evalc
-    graph --> idx
-    graph --> small
-    graph --> mlf
-    parent --> big
-    evalc --> mlf
+
+    search["Databricks AI Search<br/>[Software System]"]
+    fm["Databricks Foundation Model APIs<br/>[Software System]"]
+    mlflow["MLflow<br/>[Software System]"]
+    corpus["Hugging Face OfficeQA Pro V2<br/>[Software System]"]
+
+    user -->|"Asks a question [CLI]"| cli
+    cli -->|"Sends the question"| searcher
+    searcher -->|"Returns the evidence package"| cli
+    cli -->|"Sends question and package"| answerer
+    answerer -->|"Returns the answer"| cli
+    evalr -->|"Runs frozen questions"| searcher
+
+    searcher -->|"ann, FULL_TEXT, hybrid,<br/>year filter [SDK]"| search
+    searcher -->|"Small model tool loop [HTTPS]"| fm
+    answerer -->|"Large model answer [HTTPS]"| fm
+    searcher -->|"Traces [HTTPS]"| mlflow
+    evalr -->|"hit@k metrics [HTTPS]"| mlflow
+
+    loader -->|"Downloads the subset [HTTPS]"| corpus
+    loader -->|"Writes, then reads JSON files"| vol
+    loader -->|"Writes page rows"| pages
+    loader -->|"Triggers index sync [SDK]"| search
+    pages -->|"Delta Sync source"| search
+```
+
+## Searcher workflow
+
+Conceptual LangGraph flow. State: `messages`, `pool`, `ranking`, `rounds`.
+
+```mermaid
+flowchart TB
+    q(["Question"]) --> seed["seed_hybrid<br/>hybrid search on the raw question"]
+    seed --> agent["agent<br/>small model sees question,<br/>pool, remaining turns"]
+    agent -->|"search tool calls"| tools["tools<br/>search_ann, search_keyword,<br/>search_hybrid in parallel"]
+    tools -->|"merge hits into pool by chunk_id"| agent
+    agent -->|"submit_ranking"| pkg["Evidence package<br/>ranked pages with reasons"]
+    agent -->|"4 turns reached, no ranking"| force["force rank<br/>pool order"]
+    force -->|"pool has hits"| pkg
+    force -->|"pool is empty"| none["no_evidence: true<br/>ranked is empty"]
+    pkg --> ans["Parent<br/>large model answers<br/>from the package only"]
+    none --> ans
 ```
 
 ## Corpus and ingest
