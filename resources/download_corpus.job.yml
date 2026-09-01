@@ -1,0 +1,12 @@
+resources:
+  jobs:
+    download_corpus:
+      name: whole-wheat-download-corpus
+      tasks:
+        - task_key: download_corpus
+          notebook_task:
+            notebook_path: ../notebooks/0_download_corpus.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${resources.schemas.whole_wheat.name}
+              volume: ${resources.volumes.corpus.name}

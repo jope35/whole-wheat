@@ -1,0 +1,116 @@
+{
+  "document": {
+    "pages": [
+      {
+        "id": 0
+      },
+      {
+        "id": 1
+      },
+      {
+        "id": 2
+      }
+    ],
+    "elements": [
+      {
+        "id": 0,
+        "type": "page_header",
+        "content": "HEADER ONLY PAGE — should produce no row alone",
+        "bbox": [
+          {
+            "coord": [
+              0,
+              0,
+              100,
+              20
+            ],
+            "page_id": 0
+          }
+        ]
+      },
+      {
+        "id": 1,
+        "type": "text",
+        "content": "Receipts for fiscal year 1872 totaled one million dollars.",
+        "bbox": [
+          {
+            "coord": [
+              0,
+              40,
+              400,
+              80
+            ],
+            "page_id": 1
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "type": "table",
+        "content": "<table><tr><td>State</td><td>Amount</td></tr><tr><td>Ohio</td><td>100</td></tr></table>",
+        "bbox": [
+          {
+            "coord": [
+              0,
+              100,
+              400,
+              200
+            ],
+            "page_id": 1
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "type": "figure",
+        "content": "chart.png",
+        "bbox": [
+          {
+            "coord": [
+              0,
+              0,
+              200,
+              200
+            ],
+            "page_id": 2
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "type": "text",
+        "content": "Outlays for fiscal year 1872 are listed below.",
+        "bbox": [
+          {
+            "coord": [
+              0,
+              40,
+              400,
+              80
+            ],
+            "page_id": 2
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "type": "page_footer",
+        "content": "Page footer junk",
+        "bbox": [
+          {
+            "coord": [
+              0,
+              780,
+              400,
+              800
+            ],
+            "page_id": 2
+          }
+        ]
+      }
+    ]
+  },
+  "metadata": {
+    "year": 1872
+  }
+}
