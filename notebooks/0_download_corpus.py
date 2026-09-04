@@ -45,6 +45,8 @@ from huggingface_hub import hf_hub_download, snapshot_download
 out_dir = Path(json_dir)
 out_dir.mkdir(parents=True, exist_ok=True)
 
+# Pin the corpus to a full commit hash so the data never changes
+
 if basenames:
     for name in basenames:
         local = hf_hub_download(
@@ -52,6 +54,7 @@ if basenames:
             repo_type="dataset",
             filename=f"parsed_corpus/jsons/{name}.json",
             token=token,
+            revision="65a2b315780417bc50d7bfe6e5bdb904e63fda65",
         )
         dest = out_dir / f"{name}.json"
         dest.write_bytes(Path(local).read_bytes())
@@ -63,6 +66,7 @@ else:
         repo_type="dataset",
         allow_patterns="parsed_corpus/jsons/*.json",
         token=token,
+        revision="65a2b315780417bc50d7bfe6e5bdb904e63fda65",
     )
     src = Path(local_dir) / "parsed_corpus" / "jsons"
     for path in sorted(src.glob("*.json")):
