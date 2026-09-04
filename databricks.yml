@@ -1,6 +1,7 @@
 # Databricks Asset Bundle — whole-wheat blog demo
 bundle:
   name: whole-wheat
+  engine: direct
 
 include:
   - resources/*.yml
@@ -36,7 +37,6 @@ resources:
       name: whole_wheat
       catalog_name: ${var.catalog}
       comment: whole-wheat page rows and corpus files
-
   volumes:
     corpus:
       name: ${var.volume}
@@ -44,15 +44,10 @@ resources:
       schema_name: ${resources.schemas.whole_wheat.name}
       volume_type: MANAGED
       comment: OfficeQA JSON corpus files
-
-  jobs:
-    ingest:
-      name: whole-wheat-ingest
-      tasks:
-        - task_key: ingest
-          notebook_task:
-            notebook_path: notebooks/01_ingest.py
-            base_parameters:
-              catalog: ${var.catalog}
-              schema: ${resources.schemas.whole_wheat.name}
-              volume: ${resources.volumes.corpus.name}
+  secrets:
+    hf_token:
+      name: hf_token
+      catalog_name: ${var.catalog}
+      schema_name: ${resources.schemas.whole_wheat.name}
+      comment: Hugging Face token for OfficeQA Pro V2
+      value: ${var.hf_token}

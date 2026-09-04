@@ -23,6 +23,8 @@ import json
 import shutil
 from pathlib import Path
 
+import sys
+
 for root in (Path.cwd(), Path.cwd().parent):
     data = (root / "data").resolve()
     if data.is_dir():
@@ -32,6 +34,7 @@ else:
     raise FileNotFoundError("data/ not found next to the notebook")
 
 token = dbutils.secrets.get(catalog=catalog, schema=schema, key="hf_token")
+assert token, "hf_token secret not found"
 
 basenames = json.loads((DATA / "subset.json").read_text(encoding="utf-8"))
 

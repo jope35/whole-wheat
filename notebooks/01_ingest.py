@@ -1,5 +1,5 @@
 # Databricks notebook source
-# Plan 1 ingest: fixture → Volume → Delta page rows. Optional HF cells at the end.
+# Batch JSON from the Volume → Delta table with a VARIANT column.
 
 # COMMAND ----------
 
@@ -13,73 +13,32 @@ volume = dbutils.widgets.get("volume")
 assert catalog and schema and volume, "set catalog, schema, volume (bundle vars)"
 
 volume_path = f"/Volumes/{catalog}/{schema}/{volume}"
-table = f"{catalog}.{schema}.page_rows"
 json_dir = f"{volume_path}/jsons"
-print(volume_path, table)
+table = f"{catalog}.{schema}.bronze_corpus"
+print(json_dir, table)
 
 # COMMAND ----------
 
-import sys
-from pathlib import Path
+import pyspark.sql.functions as F
 
-for root in (Path.cwd(), Path.cwd().parent):
-    src = (root / "src").resolve()
-    if (src / "whole_wheat").is_dir():
-        sys.path.insert(0, str(src))
-        DATA = (root / "data").resolve()
-        break
-else:
-    raise FileNotFoundError("src/whole_wheat not found next to the notebook")
-
-from whole_wheat.ingest import load_json_dir, load_json_file, write_page_rows
-
-# COMMAND ----------
-
-# Fixture path: copy fixture into the Volume, write Delta, enable CDF, show rows.
-
-dbutils.fs.mkdirs(json_dir)
-fixture_src = DATA / "fixture.json"
-dbutils.fs.cp(f"file:{fixture_src}", f"{json_dir}/fixture.json")
-
-rows = load_json_file(fixture_src)
-write_page_rows(spark, rows, table)
-display(spark.table(table).limit(20))
-
-# COMMAND ----------
-
-# Optional HF path. Stop cleanly when the token or subset list is missing.
-
-import json
-
-basenames = json.loads((DATA / "subset.json").read_text(encoding="utf-8"))
-try:
-    token = dbutils.secrets.get(catalog=catalog, schema=schema, key="hf_token")
-except Exception:
-    dbutils.notebook.exit("hf_token secret missing — fixture path done")
-
-if not basenames:
-    dbutils.notebook.exit("data/subset.json empty — fixture path done")
-
-# COMMAND ----------
-
-from huggingface_hub import hf_hub_download
-
-out_dir = Path(json_dir)
-out_dir.mkdir(parents=True, exist_ok=True)
-
-for name in basenames:
-    local = hf_hub_download(
-        repo_id="databricks/officeqa-pro-v2",
-        repo_type="dataset",
-        filename=f"parsed_corpus/jsons/{name}.json",
-        token=token,
+(
+    spark.read.format("json")
+    .option("singleVariantColumn", "data")
+    .option("multiLine", "true")
+    .load(json_dir)
+    .select(
+        F.col("_metadata.file_path").alias("source_file"),
+        F.col("_metadata.file_name").alias("file_name"),
+        F.col("_metadata.file_size").alias("file_size"),
+        F.current_timestamp().alias("ingestion_time"),
+        F.col("data"),
     )
-    dest = out_dir / f"{name}.json"
-    dest.write_bytes(Path(local).read_bytes())
-    print(f"wrote {dest.name}")
+    .write.mode("overwrite")
+    .option("overwriteSchema", "true")
+    .saveAsTable(table)
+)
 
-all_rows = load_json_file(fixture_src) + [
-    r for r in load_json_dir(out_dir) if r["source_file"] != "fixture"
-]
-write_page_rows(spark, all_rows, table)
-display(spark.table(table).limit(20))
+# COMMAND ----------
+
+display(spark.table(table).limit(5))
+display(spark.sql(f"DESCRIBE TABLE {table}"))
