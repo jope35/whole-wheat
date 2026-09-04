@@ -1,0 +1,12 @@
+resources:
+  jobs:
+    ingest:
+      name: whole-wheat-ingest
+      tasks:
+        - task_key: ingest
+          notebook_task:
+            notebook_path: ../notebooks/01_ingest.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${resources.schemas.whole_wheat.name}
+              volume: ${resources.volumes.corpus.name}

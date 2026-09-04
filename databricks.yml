@@ -1,0 +1,53 @@
+# Databricks Asset Bundle — whole-wheat blog demo
+bundle:
+  name: whole-wheat
+  engine: direct
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog name
+    default: workspace
+  volume:
+    description: Volume name for corpus JSON files
+    default: corpus
+  hf_token:
+    description: Hugging Face token. Pass at deploy with --var hf_token=... Do not put the real value in YAML.
+
+sync:
+  include:
+    - src/**
+    - data/**
+    - notebooks/**
+  exclude:
+    - .agents/**
+
+targets:
+  dev:
+    mode: development
+    default: true
+    workspace:
+      host: https://dbc-b9d925fd-a82e.cloud.databricks.com
+
+resources:
+  schemas:
+    whole_wheat:
+      name: whole_wheat
+      catalog_name: ${var.catalog}
+      comment: whole-wheat page rows and corpus files
+  volumes:
+    corpus:
+      name: ${var.volume}
+      catalog_name: ${var.catalog}
+      schema_name: ${resources.schemas.whole_wheat.name}
+      volume_type: MANAGED
+      comment: OfficeQA JSON corpus files
+  secrets:
+    hf_token:
+      name: hf_token
+      catalog_name: ${var.catalog}
+      schema_name: ${resources.schemas.whole_wheat.name}
+      comment: Hugging Face token for OfficeQA Pro V2
+      value: ${var.hf_token}
