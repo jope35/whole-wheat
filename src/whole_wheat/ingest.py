@@ -7,6 +7,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from pyspark.sql import types as T
+
 from whole_wheat.contracts import PageRow
 
 TEXT_BYTE_CAP = 32_764
@@ -87,7 +89,16 @@ def load_json_dir(dir_path: Path) -> list[PageRow]:
 def write_page_rows(spark: Any, rows: list[PageRow], table: str) -> None:
     if not rows:
         raise ValueError("no page rows to write")
-    df = spark.createDataFrame([dict(r) for r in rows])
+    schema = T.StructType(
+        [
+            T.StructField("chunk_id", T.StringType(), True),
+            T.StructField("source_file", T.StringType(), True),
+            T.StructField("page_id", T.IntegerType(), True),
+            T.StructField("year", T.IntegerType(), True),
+            T.StructField("text", T.StringType(), True),
+        ]
+    )
+    df = spark.createDataFrame([dict(r) for r in rows], schema=schema)
     df.write.format("delta").mode("overwrite").option(
         "overwriteSchema", "true"
     ).saveAsTable(table)
