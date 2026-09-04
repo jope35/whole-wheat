@@ -219,3 +219,6 @@ __marimo__/
 
 # Git worktrees
 .worktrees/
+.vscode/settings.json
+.cursor/**
+
